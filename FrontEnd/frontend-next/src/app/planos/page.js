@@ -1,15 +1,9 @@
 // app/planos/page.js
-// Recomendador de Planos — Starlink Dashboard
-//
-// Fluxo:
-//   1. GET /api/planos/opcoes  → carrega continentes e finalidades para o form
-//   2. Usuário seleciona continente + finalidade
-//   3. POST /api/planos/recomendar → backend filtra objetos Plano
-//   4. Frontend lista os planos recomendados
-
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:5000'
 
@@ -25,10 +19,10 @@ function CartaoPlano({ plano }) {
       <p className="text-sm text-gray-400">{plano.descricao}</p>
       <div className="flex flex-wrap items-center gap-6 text-sm">
         <div className="flex flex-col">
-          <span className="text-xs text-gray-500 uppercase tracking-wide">Preco</span>
+          <span className="text-xs text-gray-500 uppercase tracking-wide">Preço</span>
           <span className="font-bold text-white">
             US$ {plano.preco.toLocaleString('pt-BR')}
-            <span className="text-gray-400 font-normal">/mes</span>
+            <span className="text-gray-400 font-normal">/mês</span>
           </span>
         </div>
         <div className="flex flex-col">
@@ -39,7 +33,7 @@ function CartaoPlano({ plano }) {
           </span>
         </div>
         <div className="flex flex-col">
-          <span className="text-xs text-gray-500 uppercase tracking-wide">Regiao</span>
+          <span className="text-xs text-gray-500 uppercase tracking-wide">Região</span>
           <span className="text-gray-300">{plano.continente}</span>
         </div>
       </div>
@@ -48,6 +42,8 @@ function CartaoPlano({ plano }) {
 }
 
 export default function PlanosPage() {
+  const router = useRouter()
+  const [usuarioLogado, setUsuarioLogado] = useState(null)
   const [continentes, setContinentes] = useState([])
   const [finalidades, setFinalidades] = useState([])
   const [continente, setContinente] = useState('')
@@ -56,7 +52,19 @@ export default function PlanosPage() {
   const [carregando, setCarregando] = useState(false)
   const [erro, setErro] = useState(null)
 
+  // ── Proteção de rota: redireciona para login se não houver sessão ────────
   useEffect(() => {
+    const dadosSalvos = localStorage.getItem('usuario_starlink')
+    if (!dadosSalvos) {
+      router.push('/auth')
+    } else {
+      setUsuarioLogado(JSON.parse(dadosSalvos))
+    }
+  }, [router])
+
+  // ── Carrega opções só depois que o usuário for validado ──────────────────
+  useEffect(() => {
+    if (!usuarioLogado) return
     async function carregarOpcoes() {
       try {
         const res = await fetch(`${API_URL}/api/planos/opcoes`)
@@ -64,11 +72,11 @@ export default function PlanosPage() {
         setContinentes(data.continentes ?? [])
         setFinalidades(data.finalidades ?? [])
       } catch {
-        setErro('Nao foi possivel conectar a API.')
+        setErro('Não foi possível conectar à API.')
       }
     }
     carregarOpcoes()
-  }, [])
+  }, [usuarioLogado])
 
   async function buscarPlanos() {
     if (!continente || !finalidade) {
@@ -85,7 +93,7 @@ export default function PlanosPage() {
         body: JSON.stringify({ continente, finalidade }),
       })
       const data = await res.json()
-      if (!res.ok) { setErro(data.erro ?? 'Erro ao buscar recomendacoes.'); return }
+      if (!res.ok) { setErro(data.erro ?? 'Erro ao buscar recomendações.'); return }
       setResultado(data)
     } catch {
       setErro('Erro de rede ao conectar com a API.')
@@ -94,9 +102,26 @@ export default function PlanosPage() {
     }
   }
 
+  // Tela de carregamento enquanto verifica a sessão
+  if (!usuarioLogado) {
+    return (
+      <main className="min-h-screen bg-gray-950 text-white flex items-center justify-center">
+        <p className="text-sm font-mono text-cyan-400 animate-pulse">Verificando autenticação...</p>
+      </main>
+    )
+  }
+
   return (
     <main className="min-h-screen bg-gray-950 text-white px-4 py-12">
       <div className="max-w-3xl mx-auto space-y-10">
+
+        {/* Botão Voltar */}
+        <div className="flex justify-start">
+          <Link href="/" className="text-xs font-semibold text-gray-400 hover:text-cyan-400 transition-colors flex items-center space-x-1">
+            <span>←</span> <span>Voltar ao Painel</span>
+          </Link>
+        </div>
+
         <header>
           <h1 className="text-3xl font-bold tracking-tight text-cyan-400">Recomendador de Planos</h1>
           <p className="mt-2 text-gray-400">Responda duas perguntas e descubra o plano Starlink ideal.</p>
@@ -104,7 +129,7 @@ export default function PlanosPage() {
 
         <section className="rounded-xl border border-gray-700 bg-gray-900 p-6 space-y-6">
           <div className="space-y-2">
-            <p className="text-sm font-semibold text-gray-300">Em qual continente voce esta?</p>
+            <p className="text-sm font-semibold text-gray-300">Em qual continente você está?</p>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
               {continentes.map((c) => (
                 <button key={c} onClick={() => setContinente(c)}
@@ -117,7 +142,7 @@ export default function PlanosPage() {
           </div>
 
           <div className="space-y-2">
-            <p className="text-sm font-semibold text-gray-300">Qual e a finalidade do seu plano?</p>
+            <p className="text-sm font-semibold text-gray-300">Qual é a finalidade do seu plano?</p>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {finalidades.map((f) => (
                 <button key={f} onClick={() => setFinalidade(f)}

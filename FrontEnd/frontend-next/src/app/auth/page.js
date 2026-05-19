@@ -1,17 +1,11 @@
 // app/auth/page.js
-// Autenticação — Login e Cadastro
-//
-// Fluxo login  : POST /api/login  → backend chama Usuario.autenticar()
-// Fluxo cadastro: POST /api/cadastro → backend instancia Usuario e chama .cadastrar()
-
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation' // Adicionado para gerenciar o redirecionamento
+import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:5000'
-
-// ── Sub-componentes reutilizáveis ─────────────────────────────────────────
 
 function Input({ label, value, onChange, placeholder, type = 'text' }) {
   return (
@@ -46,17 +40,14 @@ function Botao({ onClick, carregando, label }) {
   )
 }
 
-// ── Componente principal ──────────────────────────────────────────────────
-
 export default function AuthPage() {
-  const router = useRouter() // Inicializando o roteador do Next.js
-  const [aba, setAba] = useState('login')           // 'login' | 'cadastro'
+  const router = useRouter()
+  const [aba, setAba] = useState('login')
   const [carregando, setCarregando] = useState(false)
   const [erro, setErro] = useState(null)
   const [sucesso, setSucesso] = useState(null)
   const [perfil, setPerfil] = useState(null)
 
-  // Campos do formulário
   const [nome, setNome] = useState('')
   const [username, setUsername] = useState('')
   const [email, setEmail] = useState('')
@@ -68,7 +59,6 @@ export default function AuthPage() {
     setPerfil(null)
   }
 
-  // ── Handler de Login ────────────────────────────────────────────────────
   async function handleLogin() {
     limparEstado()
     setCarregando(true)
@@ -80,21 +70,12 @@ export default function AuthPage() {
       })
       const data = await res.json()
       if (!res.ok) { setErro(data.erro); return }
-      
+
       setPerfil(data.perfil)
-      
-      // ── O LOCAL EXATO DA ADIÇÃO É AQUI ──────────────────────────────────
-      // 1. Salva os dados do perfil retornados pelo Flask no navegador
       localStorage.setItem('usuario_starlink', JSON.stringify(data.perfil))
-      
       setSucesso(`Bem-vindo(a), ${data.perfil.nome}! Redirecionando...`)
 
-      // 2. Aguarda 1.5 segundos exibindo o sucesso e joga para a Home corrigida
-      setTimeout(() => {
-        router.push('/')
-      }, 1500)
-      // ────────────────────────────────────────────────────────────────────
-
+      setTimeout(() => { router.push('/') }, 1500)
     } catch {
       setErro('Erro de rede. Verifique se o backend Flask está rodando.')
     } finally {
@@ -102,7 +83,6 @@ export default function AuthPage() {
     }
   }
 
-  // ── Handler de Cadastro ─────────────────────────────────────────────────
   async function handleCadastro() {
     limparEstado()
     setCarregando(true)
@@ -114,21 +94,27 @@ export default function AuthPage() {
       })
       const data = await res.json()
       if (!res.ok) { setErro(data.erro); return }
-      setSucesso('Cadastro realizado! Faça login para continuar.')
+      setSucesso('Cadastro realizado! Faca login para continuar.')
       setAba('login')
     } catch {
-      setErro('Erro de rede. Verifique se o backend Flask está rodando.')
+      setErro('Erro de rede. Verifique se o backend Flask esta rodando.')
     } finally {
       setCarregando(false)
     }
   }
 
-  // ── Render ──────────────────────────────────────────────────────────────
   return (
     <main className="min-h-screen bg-gray-950 text-white flex items-center justify-center px-4">
       <div className="w-full max-w-md space-y-6">
 
-        {/* Título */}
+        {/* Botao Voltar */}
+        <div className="flex justify-start">
+          <Link href="/" className="text-xs font-semibold text-gray-400 hover:text-cyan-400 transition-colors flex items-center space-x-1">
+            <span>←</span> <span>Voltar ao Painel</span>
+          </Link>
+        </div>
+
+        {/* Titulo */}
         <div className="text-center">
           <h1 className="text-3xl font-bold text-cyan-400">Starlink Dashboard</h1>
           <p className="mt-1 text-sm text-gray-500">Gerenciamento de conectividade</p>
@@ -151,7 +137,6 @@ export default function AuthPage() {
             ))}
           </div>
 
-          {/* Mensagens */}
           {sucesso && (
             <div className="rounded-lg border border-green-500/40 bg-green-950/30 p-3 text-green-400 text-sm">
               {sucesso}
@@ -163,7 +148,6 @@ export default function AuthPage() {
             </div>
           )}
 
-          {/* Perfil pós-login */}
           {perfil && (
             <div className="rounded-lg border border-cyan-700/40 bg-cyan-950/20 p-4 space-y-1">
               <p className="text-xs text-cyan-400 uppercase tracking-widest font-semibold">Perfil</p>
@@ -173,7 +157,6 @@ export default function AuthPage() {
             </div>
           )}
 
-          {/* Formulário de Login */}
           {aba === 'login' && !perfil && (
             <div className="space-y-4">
               <Input label="Username" value={username} onChange={setUsername} placeholder="seu_usuario" />
@@ -182,7 +165,6 @@ export default function AuthPage() {
             </div>
           )}
 
-          {/* Formulário de Cadastro */}
           {aba === 'cadastro' && (
             <div className="space-y-4">
               <Input label="Nome completo" value={nome} onChange={setNome} placeholder="Seu Nome" />
